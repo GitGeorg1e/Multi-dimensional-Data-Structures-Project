@@ -115,7 +115,7 @@ def jaccard_similarity(set1, set2):
     return intersection / union
 
 
-def rank_candidates_by_jaccard(query_shingles, candidates, ngram=2, top_n=10):
+def rank_candidates_by_jaccard(query_shingles, candidates, ngram, top_n):
     """Ranks candidate models by their Jaccard similarity with the query."""
     ranked = []
 
@@ -129,44 +129,66 @@ def rank_candidates_by_jaccard(query_shingles, candidates, ngram=2, top_n=10):
     return ranked[:top_n]  # return only top-N
 
 
+# Add this at the bottom of your lsh.py file:
+
+def run_lsh_on_candidates(candidate_model_names, query_model_name, vocab, hash_funcs, bands, rows_per_band, ngram, top_n):
+    """
+    Runs full LSH matching on a subset of candidate models and returns the top-N most similar to the query model.
+    """
+    # Build signatures for candidates
+    candidate_signatures = {}
+    for name in candidate_model_names:
+        shingles = get_shingles(name, n=ngram)
+        signature = minhash_signature(shingles, vocab, hash_funcs)
+        candidate_signatures[name] = signature
+
+    # Build temporary LSH index
+    candidate_lsh_index = build_lsh_index(candidate_signatures, bands=bands, rows_per_band=rows_per_band)
+
+    # Build query signature
+    query_shingles = get_shingles(query_model_name, n=ngram)
+    query_signature = minhash_signature(query_shingles, vocab, hash_funcs)
+
+    # Query LSH
+    lsh_candidates = lsh_query(query_signature, candidate_lsh_index, bands=bands, rows_per_band=rows_per_band)
+
+    # Rank by true Jaccard
+    top_similar = rank_candidates_by_jaccard(query_shingles, lsh_candidates, ngram=ngram, top_n=top_n)
+
+    return top_similar
+
+
+
 if __name__ == "__main__":
 
    # Step 1: Load dataset and extract model names
     df = pd.read_csv("cars24data.csv")
     model_names = df["Model Name"].dropna().unique()
 
-    # Step 2: Build vocabulary from bigram shingles
+    # Step 2: Build vocabulary and hash functions for MinHashing
     vocab = build_shingle_vocab(model_names)
-
-    # Step 3: Generate hash functions for MinHashing
     num_hashes = 100
     bands = 20
     rows_per_band = num_hashes // bands
     hash_funcs = generate_hash_functions(num_hashes, len(vocab))
 
-    # Step 4: Create MinHash signatures for all model names
-    signatures = {}
-    for name in model_names:
-        shingles = get_shingles(name)
-        signature = minhash_signature(shingles, vocab, hash_funcs)
-        signatures[name] = signature
-
-    # Step 5: Build LSH index
-    lsh_index = build_lsh_index(signatures, bands=bands, rows_per_band=rows_per_band)
-
-    # Step 6: Query model
+    # Step 3: Ask user for the query model
     query_model = input("\nEnter the model name to query (e.g., 'Hyundai i10'): ").strip()
-    query_shingles = get_shingles(query_model)
-    query_signature = minhash_signature(query_shingles, vocab, hash_funcs)
 
-    # Step 7: LSH query to get candidate matches
-    candidates = lsh_query(query_signature, lsh_index, bands=bands, rows_per_band=rows_per_band)
-    print(f"\nFound {len(candidates)} candidate models through LSH.")
+    # Step 4: Run LSH on full dataset (all models) to find similar models
+    top_similar = run_lsh_on_candidates(
+        candidate_model_names=model_names,
+        query_model_name=query_model,
+        vocab=vocab,
+        hash_funcs=hash_funcs,
+        bands=bands,
+        rows_per_band=rows_per_band,
+        ngram=2,
+        top_n=5
+    )
 
-    # Step 8: Rank candidates using actual Jaccard similarity
-    top_similar = rank_candidates_by_jaccard(query_shingles, candidates, top_n=10)
-
-    # Step 9: Print final Top-N similar models
-    print(f"\nTop-10 models similar to '{query_model}':")
+    # Step 5: Print final Top-N similar models
+    print(f"\nTop-5 models similar to '{query_model}':")
     for model, sim in top_similar:
         print(f"{model:30} → Similarity: {sim:.3f}")
+

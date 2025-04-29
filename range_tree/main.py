@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+import time
 
 class RangeTree1D:
     def __init__(self, points):
@@ -145,6 +145,24 @@ def range_query_3D(node, x_range, y_range, z_range):
     return results
 
 
+def build_range_tree(points):
+    start_time = time.perf_counter()
+    tree = RangeTree3D(points)
+    end_time = time.perf_counter()
+    build_duration = end_time - start_time
+    print(f"Build time for 3D Range Tree: {build_duration:.4f} seconds")
+    return tree, build_duration
+
+
+def execute_range_query(tree, x_range, y_range, z_range):
+    start_time = time.perf_counter()
+    results = range_query_3D(tree.tree, x_range, y_range, z_range)
+    end_time = time.perf_counter()
+    query_duration = (end_time - start_time) * 1000  # milliseconds
+    print(f"Query time: {query_duration:.2f} ms")
+    return results, query_duration
+
+
 
 if __name__ == "__main__":
 
@@ -158,7 +176,7 @@ if __name__ == "__main__":
     points = [tuple(int(v) for v in row) for row in df_main.to_numpy()]
 
     print("Building 3D range tree...")
-    tree3D = RangeTree3D(points)
+    tree3D, build_time = build_range_tree(points)
 
     print("Enter your 3D range query:")
     x_range = tuple(map(int, input("Price range (min max): ").split()))
@@ -167,7 +185,7 @@ if __name__ == "__main__":
 
 
     print("Running 3D query...")
-    results = range_query_3D(tree3D.tree, x_range, y_range, z_range)
+    results, query_time = execute_range_query(tree3D, x_range, y_range, z_range)
 
     lookup = {
     (int(row["Price"]), int(row["Engine capacity"]), int(row["KM driven"])): row["Model Name"]
