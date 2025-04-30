@@ -159,7 +159,6 @@ def execute_range_query(tree, x_range, y_range, z_range):
     results = range_query_3D(tree.tree, x_range, y_range, z_range)
     end_time = time.perf_counter()
     query_duration = (end_time - start_time) * 1000  # milliseconds
-    print(f"Query time: {query_duration:.2f} ms")
     return results, query_duration
 
 
