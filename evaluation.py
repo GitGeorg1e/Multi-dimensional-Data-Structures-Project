@@ -30,8 +30,8 @@ lookup = {
 model_names = df_full["Model Name"].dropna().unique()
 vocab = build_shingle_vocab(model_names)
 
-num_hashes = 100
-bands = 20
+num_hashes = 20
+bands = 10
 rows_per_band = num_hashes // bands
 hash_funcs = generate_hash_functions(num_hashes, len(vocab))
 

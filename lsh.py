@@ -23,7 +23,7 @@ def build_shingle_vocab(model_names, n=2):
     for name in model_names:
         shingles = get_shingles(name, n=n)
         vocab.update(shingles)
-    return sorted(vocab)  # Optional: return in fixed order for consistent indexing
+    return sorted(vocab)  
 
 
 
@@ -167,8 +167,8 @@ if __name__ == "__main__":
 
     # Step 2: Build vocabulary and hash functions for MinHashing
     vocab = build_shingle_vocab(model_names)
-    num_hashes = 100
-    bands = 20
+    num_hashes = 20
+    bands = 10   
     rows_per_band = num_hashes // bands
     hash_funcs = generate_hash_functions(num_hashes, len(vocab))
 
