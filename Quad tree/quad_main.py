@@ -165,7 +165,7 @@ print(f"\nTotal search time: {search_time} seconds\n")
 if len(CarsInRange) > 1:
         
        # Execute the LSH algorithm
-        print('EKTELESI LSH')
+        print('EKTELESI LSH STO SHMEIO AUTO')
         
         
         
