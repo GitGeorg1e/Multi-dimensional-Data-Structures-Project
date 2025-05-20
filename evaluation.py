@@ -3,11 +3,14 @@ import random
 import numpy as np
 import time
 
-# Import RangeTree functions
+# Import Range-Tree functions
 from range_tree.main import build_range_tree, execute_range_query
 
 # Import KD-Tree functions
 from kd_tree.data import build_kdtree, execute_kd_query
+
+# Import Quad-Tree functions
+from quad_tree.quad_main import build_quadtree, execute_quad_query
 
 # Import LSH functions
 from lsh import run_lsh_on_candidates, build_shingle_vocab, generate_hash_functions
@@ -129,6 +132,48 @@ def evaluate_kd_tree(points, lookup, vocab, hash_funcs, model_names, n_queries=5
 
     return build_time, np.mean(query_times), np.mean(lsh_times)
 
+
+def evaluate_quadtree(cars, lookup, vocab, hash_funcs, model_names, n_queries=50):
+    print("\nBuilding and Evaluating QuadTree + LSH...")
+    tree, build_time = build_quadtree(cars)
+
+    query_model_name = "Maruti 2014"
+    query_times = []
+    lsh_times = []
+
+    for _ in range(n_queries):
+        x_range, y_range, z_range = generate_random_query()
+        candidates, query_time = execute_quad_query(tree, x_range, y_range, z_range)
+        query_times.append(query_time)
+
+        if not candidates:
+            continue
+
+        candidate_model_names = [
+            lookup[(price, engine, km)]
+            for (_, price, engine, km) in candidates
+            if (price, engine, km) in lookup
+        ]
+
+        start_lsh = time.perf_counter()
+        _ = run_lsh_on_candidates(
+            candidate_model_names=candidate_model_names,
+            query_model_name=query_model_name,
+            vocab=vocab,
+            hash_funcs=hash_funcs,
+            bands=bands,
+            rows_per_band=rows_per_band,
+            ngram=2,
+            top_n=5
+        )
+        end_lsh = time.perf_counter()
+
+        lsh_times.append((end_lsh - start_lsh) * 1000)
+
+    return build_time, np.mean(query_times), np.mean(lsh_times)
+
+
+
 # === Step 3: Run All Evaluations ===
 
 results = []
@@ -140,6 +185,10 @@ results.append(("Range Tree + LSH", build_time, avg_query_time, avg_lsh_time))
 # KD-Tree Evaluation
 build_time, avg_query_time, avg_lsh_time = evaluate_kd_tree(points, lookup, vocab, hash_funcs, model_names)
 results.append(("KD-Tree + LSH", build_time, avg_query_time, avg_lsh_time))
+
+# QuadTree Evaluation
+build_time, avg_query_time, avg_lsh_time = evaluate_quadtree(df_full.values.tolist(), lookup, vocab, hash_funcs, model_names)
+results.append(("QuadTree + LSH", build_time, avg_query_time, avg_lsh_time))
 
 # === Step 4: Print Final Comparison Table ===
 

@@ -74,7 +74,7 @@ def InsertCar(node, attributes):
 
 
 # The function for the range search in the tree
-def RangeSearch(node, left_pr, right_pr, left_ec, right_ec, left_km, right_km):
+def RangeSearch(node, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange):
 
 
     if node is None:
@@ -87,32 +87,52 @@ def RangeSearch(node, left_pr, right_pr, left_ec, right_ec, left_km, right_km):
     
     #Check if there is no point to keep searching in a subtree
     if((left_pr < node.attributes[1]) and (left_ec < node.attributes[2]) and (left_km < node.attributes[3])):
-         RangeSearch(node.OOO, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.OOO, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     if((left_pr < node.attributes[1]) and (left_ec < node.attributes[2]) and (right_km >= node.attributes[3])):
-         RangeSearch(node.OOI, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.OOI, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     if((left_pr < node.attributes[1]) and (right_ec >= node.attributes[2]) and (left_km < node.attributes[3])):
-         RangeSearch(node.OIO, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.OIO, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     if((left_pr < node.attributes[1]) and (right_ec >= node.attributes[2]) and (right_km >= node.attributes[3])):
-         RangeSearch(node.OII, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.OII, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     if((right_pr >= node.attributes[1]) and (left_ec < node.attributes[2]) and (left_km < node.attributes[3])):
-         RangeSearch(node.IOO, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.IOO, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     if((right_pr >= node.attributes[1]) and (left_ec < node.attributes[2]) and (right_km >= node.attributes[3])):
-         RangeSearch(node.IOI, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.IOI, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     if((right_pr >= node.attributes[1]) and (right_ec >= node.attributes[2]) and (left_km < node.attributes[3])):
-         RangeSearch(node.IIO, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.IIO, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     if((right_pr >= node.attributes[1]) and (right_ec >= node.attributes[2]) and (right_km >= node.attributes[3])):
-         RangeSearch(node.III, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+         RangeSearch(node.III, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
     return None
 
 
+# Functions used and needed only for evaluation.py
+def build_quadtree(cars):
+    start = time.perf_counter()
+    root = None
+    for car in cars:
+        root = InsertCar(root, car)
+    end = time.perf_counter()
+    build_time = end - start
+    print(f"Build time for Quad-Tree: {build_time:.4f} seconds")
+    return root, build_time
+
+def execute_quad_query(tree, x_range, y_range, z_range):
+    left_pr, right_pr = x_range
+    left_ec, right_ec = y_range
+    left_km, right_km = z_range
+    results = []
+    start = time.perf_counter()
+    RangeSearch(tree, left_pr, right_pr, left_ec, right_ec, left_km, right_km, results)
+    end = time.perf_counter()
+    return results, (end - start) * 1000
 
 
 # Main function
@@ -129,47 +149,37 @@ if __name__ == '__main__':
  # Convert each row to a Python list and gather them in `cars`
  cars = selected.values.tolist()
 
-creation_time=time.time() # Record the start time of the creation of the tree
-# Insert the first car in the tree and set this object as the root node
-root = None
-root = InsertCar(root, cars[0])
+ creation_time=time.time() # Record the start time of the creation of the tree
+ # Insert the first car in the tree and set this object as the root node
+ root = None
+ root = InsertCar(root, cars[0])
 
-# Insert the other cars in the tree
-for car in cars[1:]:
-    InsertCar(root, car)
+ # Insert the other cars in the tree
+ for car in cars[1:]:
+     InsertCar(root, car)
 
-creation_time_end=time.time()-creation_time
-print(f"\nTotal construction time: {creation_time_end} seconds\n")
+ creation_time_end=time.time()-creation_time
+ print(f"\nTotal construction time: {creation_time_end} seconds\n")
 
-#User query
-left_pr, right_pr, left_ec, right_ec, left_km, right_km = get_query()
+ #User query
+ left_pr, right_pr, left_ec, right_ec, left_km, right_km = get_query()
 
-start_time = time.time()  # Record the start time
+ start_time = time.time()  # Record the start time
 
-# This array contains all the cars whose attributes are included in the given range
-CarsInRange = []
-RangeSearch(root, left_pr, right_pr, left_ec, right_ec, left_km, right_km)
+ # This array contains all the cars whose attributes are included in the given range
+ CarsInRange = []
+ RangeSearch(root, left_pr, right_pr, left_ec, right_ec, left_km, right_km, CarsInRange)
 
-end_time = time.time()  # Record the end time
-search_time = end_time - start_time  # Calculate the total time for the search
+ end_time = time.time()  # Record the end time
+ search_time = end_time - start_time  # Calculate the total time for the search
 
-print('\nRange search finished. Results:\n')
+ print('\nRange search finished. Results:\n')
 
-# Print the cars in range
-for c in CarsInRange:
-        print(c)
+ # Print the cars in range
+ for c in CarsInRange:
+         print(c)
 
-print(f"\nTotal search time: {search_time} seconds\n")
+ print(f"\nTotal search time: {search_time} seconds\n")
 
 
-if len(CarsInRange) > 1:
-        
-       # Execute the LSH algorithm
-        print('EKTELESI LSH STO SHMEIO AUTO')
-        
-        
-        
-else:
-        print("\n We have only one or zero results. LSH was not executed! \n")
-        print("RESULTS: \n")
-        print(CarsInRange)
+
