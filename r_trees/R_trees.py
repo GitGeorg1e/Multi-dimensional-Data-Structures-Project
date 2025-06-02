@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from collections import defaultdict
+import time
 
 
 class MBR:
@@ -62,7 +63,7 @@ class RTreeNode:
     def add_entry(self, mbr, obj_or_child):
         self.entries.append((mbr, obj_or_child))
         self.update_mbr()
-         # ✅ Set parent pointer if it's a child node
+         # Set parent pointer if it's a child node
         if isinstance(obj_or_child, RTreeNode):
             obj_or_child.parent = self
 
@@ -175,6 +176,58 @@ class RTree:
                 self.split_node(parent)
 
 
+# Functions for "evaluation.py"
+def build_rtree_from_df(df):
+    """
+    Accepts a pandas DataFrame with columns: Model Name, Price, Engine capacity, KM driven
+    and builds an R-tree with the proper format.
+    """
+    tree = RTree(max_entries=4)
+    start = time.perf_counter()
+
+    for _, row in df.iterrows():
+        point = {
+            "model": row["Model Name"],
+            "price": int(row["Price"]),
+            "engine": int(row["Engine capacity"]),
+            "km": int(row["KM driven"])
+        }
+        tree.insert(point)
+
+    end = time.perf_counter()
+    build_duration = end - start
+    print(f"Build time for R-Tree: {build_duration:.4f} seconds")
+    return tree, end - start
+
+
+def execute_rtree_query(tree, x_range, y_range, z_range):
+    """
+    Executes a range query on an existing R-tree.
+    Returns the matching points and query time in milliseconds.
+    """
+    results = []
+    query_mbr = MBR(x_range, y_range, z_range)
+
+    def search(node):
+        if not node.mbr or not node.mbr.intersects(query_mbr):
+            return
+        if node.is_leaf:
+            for mbr, point in node.entries:
+                x, y, z = point["price"], point["engine"], point["km"]
+                if (x_range[0] <= x <= x_range[1] and
+                    y_range[0] <= y <= y_range[1] and
+                    z_range[0] <= z <= z_range[1]):
+                    results.append(point)
+        else:
+            for _, child in node.entries:
+                search(child)
+
+    start = time.perf_counter()
+    search(tree.root)
+    end = time.perf_counter()
+    return results, (end - start) * 1000                
+
+
 if __name__ == "__main__":
 
     # Load the cars24data.csv file
@@ -201,73 +254,71 @@ if __name__ == "__main__":
     print("Inserted", len(df), "points into the R-tree.")
 
     # Diagnostic functions
-def print_tree_stats(tree):
-    def count_nodes(node):
-        if node.is_leaf:
-            return 1
-        return 1 + sum(count_nodes(child) for _, child in node.entries)
+    def print_tree_stats(tree):
+        def count_nodes(node):
+            if node.is_leaf:
+                return 1
+            return 1 + sum(count_nodes(child) for _, child in node.entries)
 
-    def max_depth(node):
-        if node.is_leaf:
-            return 1
-        return 1 + max(max_depth(child) for _, child in node.entries)
+        def max_depth(node):
+            if node.is_leaf:
+                return 1
+            return 1 + max(max_depth(child) for _, child in node.entries)
 
-    total_nodes = count_nodes(tree.root)
-    depth = max_depth(tree.root)
-    print(f"Tree depth: {depth}")
-    print(f"Total nodes: {total_nodes}")
-    print(f"Root has {len(tree.root.entries)} entries")
+        total_nodes = count_nodes(tree.root)
+        depth = max_depth(tree.root)
+        print(f"Tree depth: {depth}")
+        print(f"Total nodes: {total_nodes}")
+        print(f"Root has {len(tree.root.entries)} entries")
 
-# Run the checks
-print_tree_stats(tree)
-
-
-def get_range_input(label):
-    raw = input(f"Enter {label} range: ").strip().split()
-    if len(raw) != 2:
-        raise ValueError("You must enter two numbers separated by space.")
-    return [int(raw[0]), int(raw[1])]
+    # Run the checks
+    print_tree_stats(tree)
+    def get_range_input(label):
+        raw = input(f"Enter {label} range: ").strip().split()
+        if len(raw) != 2:
+            raise ValueError("You must enter two numbers separated by space.")
+        return [int(raw[0]), int(raw[1])]
 
 
-print("\n🔍 Define your 3D range query:")
+    print("\nDefine your 3D range query:")
 
-query_x = get_range_input("Price (X)")
-query_y = get_range_input("Engine (Y)")
-query_z = get_range_input("KM driven (Z)")
-
-
-def range_query(node, x_range, y_range, z_range):
-    results = []
-
-    query_mbr = MBR(x_range, y_range, z_range)
-
-    def search(n):
-        if not n.mbr.intersects(query_mbr):
-            return  # Prune this branch
-
-        if n.is_leaf:
-            for mbr, point in n.entries:
-                x = point["price"]
-                y = point["engine"]
-                z = point["km"]
-
-                if x_range[0] <= x <= x_range[1] and \
-                   y_range[0] <= y <= y_range[1] and \
-                   z_range[0] <= z <= z_range[1]:
-                    results.append(point)
-        else:
-            for _, child in n.entries:
-                search(child)
-
-    search(node)
-    return results
+    query_x = get_range_input("Price (X)")
+    query_y = get_range_input("Engine (Y)")
+    query_z = get_range_input("KM driven (Z)")
 
 
-matching_points = range_query(tree.root, query_x, query_y, query_z)
+    def range_query(node, x_range, y_range, z_range):
+        results = []
 
-print(f"\n🔎 Found {len(matching_points)} matching points:")
-for pt in matching_points[:10]:  # Show first 10
-    print(f"  → {pt['model']}: [{pt['price']}, {pt['engine']}, {pt['km']}]")
+        query_mbr = MBR(x_range, y_range, z_range)
+
+        def search(n):
+            if not n.mbr.intersects(query_mbr):
+                return  # Prune this branch
+
+            if n.is_leaf:
+                for mbr, point in n.entries:
+                    x = point["price"]
+                    y = point["engine"]
+                    z = point["km"]
+
+                    if x_range[0] <= x <= x_range[1] and \
+                    y_range[0] <= y <= y_range[1] and \
+                    z_range[0] <= z <= z_range[1]:
+                        results.append(point)
+            else:
+                for _, child in n.entries:
+                    search(child)
+
+        search(node)
+        return results
+
+
+    matching_points = range_query(tree.root, query_x, query_y, query_z)
+
+    print(f"\n🔎 Found {len(matching_points)} matching points:")
+    for pt in matching_points[:10]:  # Show first 10
+        print(f"  → {pt['model']}: [{pt['price']}, {pt['engine']}, {pt['km']}]")
 
 
 

@@ -150,7 +150,7 @@ def build_range_tree(points):
     tree = RangeTree3D(points)
     end_time = time.perf_counter()
     build_duration = end_time - start_time
-    print(f"Build time for 3D Range Tree: {build_duration:.4f} seconds")
+    print(f"Build time for Range Tree: {build_duration:.4f} seconds")
     return tree, build_duration
 
 
