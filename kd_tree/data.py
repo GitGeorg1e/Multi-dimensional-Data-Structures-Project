@@ -165,7 +165,7 @@ if __name__ == "__main__":
     knn_results = knn_search(custom_tree, query, k=3)
 
     # Εκτύπωση αποτελεσμάτων
-    print("\n🔍 Τα 3 πλησιέστερα αυτοκίνητα:")
+    print("\nΤα 3 πλησιέστερα αυτοκίνητα:")
     for p in knn_results:
         model = point_to_model.get(tuple(p), "Άγνωστο")
         print(f"Model: {model} | Price: {p[0]} | Engine: {p[1]} | KM: {p[2]}")

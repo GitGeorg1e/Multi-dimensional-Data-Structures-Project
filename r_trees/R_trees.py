@@ -316,7 +316,7 @@ if __name__ == "__main__":
 
     matching_points = range_query(tree.root, query_x, query_y, query_z)
 
-    print(f"\n🔎 Found {len(matching_points)} matching points:")
+    print(f"\nFound {len(matching_points)} matching points:")
     for pt in matching_points[:10]:  # Show first 10
         print(f"  → {pt['model']}: [{pt['price']}, {pt['engine']}, {pt['km']}]")
 
